@@ -11,6 +11,21 @@ that a game with two players in front of it needs.
 
 ### Engine core
 
+- **printf now reaches Dolphin's log** — `magnolia_init()` calls
+  `SYS_STDIO_Report(true)`, which routes stdout and stderr to the OSReport UART.
+  Without it libogc leaves stdout attached to nothing, so **every `printf` in
+  every game built on this engine was silently discarded**, across all three
+  shipped games. `template/README.md` has been documenting the Logger.ini half
+  of this the whole time, so the advice to "run the `.dol` and read the log"
+  produced a 0-byte log however Logger.ini was set — a symptom that reads as
+  logging being switched off rather than as nothing having been sent, which is
+  why it survived three games. `george-boole` has a `printf` at
+  `wii/source/main.c:93` that has therefore never produced a line; it does now.
+  The call is first in `magnolia_init()`, ahead of `renderer_init()`, so a
+  `printf` tracing a video failure is not lost to the failure it is reporting.
+  Costs nothing where nothing is listening — on hardware with no USB Gecko the
+  writes go to an absent EXI device, the same place they went before — but keep
+  `printf` out of per-frame code, since an EXI write is not free.
 - **magnolia_init() reorders boot** — video comes up before `fatInitDefault()`, so a
   slow or wedged SD mount shows a splash screen instead of a blank framebuffer.
   Adds `renderer_splash()` for status frames during bring-up.

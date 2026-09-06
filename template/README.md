@@ -95,5 +95,25 @@ Then run the `.dol` and read the log. For `printf` to reach Dolphin's log, its
 `Logger.ini` needs `OSREPORT = True` and `WriteToFile = True` -- both default to
 False, which makes a working trace look like a dead one.
 
+The engine side of that is `SYS_STDIO_Report(true)`, which `magnolia_init()`
+calls for you. It matters because libogc leaves stdout attached to nothing
+without it: until magnolia 0.3.0 that call was missing, this page described the
+Logger.ini half alone, and every `printf` in every game built on the engine was
+discarded. The symptom was a **0-byte `dolphin.log`** however Logger.ini was
+set -- which reads as "logging is off" rather than "nothing was ever sent", and
+is why it went unnoticed across three games. If you see an empty log now, the
+Logger.ini settings really are the thing to check.
+
+Keep `printf` out of per-frame code: it is an EXI write, not free.
+
+**Nothing can press a button for you.** Dolphin's emulated Wiimote reads the
+keyboard through DirectInput, which does not observe injected keystrokes, so
+neither `SendInput` nor `keybd_event` reaches the game -- and nothing reports an
+error, the keys simply do nothing. The mouse is the exception, since `Buttons/A`
+defaults to `Click 0`, which means a script can click through a title screen and
+then find that no other control responds. That looks exactly like a broken input
+mapping. This is the whole reason the autostart define above exists; do not
+spend an afternoon rediscovering it.
+
 Dolphin also reuses an already-running instance, so kill it between runs or you
 will read the previous run's log and debug a binary that is not running.

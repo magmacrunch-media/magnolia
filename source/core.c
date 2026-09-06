@@ -1,4 +1,5 @@
 #include <fat.h>
+#include <ogc/system.h>     /* SYS_STDIO_Report */
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -16,6 +17,23 @@ static char asset_buf[192];
 
 int magnolia_init(const MagnoliaConfig *cfg) {
     int status = 0;
+
+    /* Route stdout and stderr to the OSReport UART, which is what makes printf
+       visible in Dolphin's log. Without this call libogc leaves stdout attached
+       to nothing at all, so every printf in a game built on this engine is
+       silently discarded -- and template/README.md has been telling people to
+       enable OSREPORT in Logger.ini and read the output, which produced a
+       0-byte log however Logger.ini was set. The documentation was describing
+       this line; it just was not here.
+
+       First, before renderer_init(), so that a printf tracing a failure in
+       bringing up video is not itself lost to the failure it is reporting.
+
+       Costs nothing where nothing is listening: on a real console with no USB
+       Gecko in the slot the writes go to an absent EXI device and are
+       discarded, which is the same place they went before. Games should still
+       keep printf out of per-frame code -- an EXI write is not free. */
+    SYS_STDIO_Report(true);
 
     if (cfg && cfg->app_name) {
         snprintf(app_name, sizeof(app_name), "%s", cfg->app_name);
