@@ -29,6 +29,22 @@ INCLUDES    := ../magnolia ../magnolia/source ../magnolia/font source
 LIBS        := -lgrrlib -lpngu -lfreetype -lpng -ljpeg -lz -lbrotlidec -lbrotlicommon -lbz2 -lfat -lasnd -lwiiuse -lbte -logc -lm
 ```
 
+**And FreeType's headers on the include line.** `source/text.c` calls FreeType
+directly to rasterise glyphs into the cache, so the game's `INCLUDE` needs the
+directory `ft2build.h` lives in — one line, in the `export INCLUDE` block:
+
+```makefile
+export INCLUDE  := $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
+                   -I$(PORTLIBS_PATH)/ppc/include/freetype2 \
+                   $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
+                   -I$(CURDIR) -I$(CURDIR)/$(BUILD) -I$(LIBOGC_INC)
+```
+
+`-lfreetype` was already in `LIBS`, because GRRLIB needs it; this adds only the
+headers. Miss it and the build stops at `ft2build.h: No such file or directory`
+while compiling the engine, which at least names the problem — unlike most of
+what goes wrong in a devkitPro Makefile.
+
 Games build magnolia's sources directly — there is no `libmagnolia.a` linking step.
 
 ### 3. Include and use

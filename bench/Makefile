@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------------------
-# __GAME__ -- a magnolia game
+# textbench -- a magnolia game
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 .SECONDARY:
@@ -15,11 +15,11 @@ include $(DEVKITPPC)/wii_rules
 endif
 
 #---------------------------------------------------------------------------------
-TARGET      := __GAME__
+TARGET      := textbench
 BUILD       := build
-SOURCES     := source ../magnolia/source ../magnolia/font
+SOURCES     := source ../source ../font
 DATA        :=
-INCLUDES    := ../magnolia ../magnolia/source ../magnolia/font source
+INCLUDES    := .. ../source ../font source
 
 CFLAGS      = -g -O2 -Wall $(MACHDEP) $(INCLUDE)
 CXXFLAGS    = $(CFLAGS)

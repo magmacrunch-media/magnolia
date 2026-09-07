@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "ui_utils.h"
+#include "text.h"
 #include "ui_geom.h"
 #include "renderer.h"
 
@@ -62,20 +63,20 @@ void ui_draw_text_shadow(int design_x, int design_y, const char *text,
     int x = ui_map_x(design_x);
     int y = ui_map_y(design_y);
     unsigned int size = ui_map_size(design_size);
-    GRRLIB_PrintfTTF(x + 2, y + 2, ttf_font, text, size, shadow_color);
-    GRRLIB_PrintfTTF(x, y, ttf_font, text, size, color);
+    text_draw(x + 2, y + 2, text, size, shadow_color);
+    text_draw(x, y, text, size, color);
 }
 
 void ui_draw_centered_text(int design_y, const char *text,
                            unsigned int design_size, u32 color) {
     if (!ttf_font) return;
     unsigned int size = ui_map_size(design_size);
-    u32 w = GRRLIB_WidthTTF(ttf_font, text, size);
+    u32 w = text_width(text, size);
     int x = ui_safe_x() + (ui_safe_w() - (int)w) / 2;
     int y = ui_map_y(design_y);
     if (x < 0) x = 0;
-    GRRLIB_PrintfTTF(x + 2, y + 2, ttf_font, text, size, shadow_color);
-    GRRLIB_PrintfTTF(x, y, ttf_font, text, size, color);
+    text_draw(x + 2, y + 2, text, size, shadow_color);
+    text_draw(x, y, text, size, color);
 }
 
 void ui_draw_border(void) {
@@ -91,7 +92,7 @@ void ui_draw_border(void) {
 int ui_text_width(const char *text, unsigned int design_size) {
     if (!ttf_font || !text) return 0;
     UiGeom g = geom();
-    u32 w = GRRLIB_WidthTTF(ttf_font, text, ui_geom_map_size(&g, design_size));
+    u32 w = text_width(text, ui_geom_map_size(&g, design_size));
     /* Back out of screen space into design space, so the result composes with
        the design-space coordinates the caller is working in. */
     return ui_geom_to_design_w(&g, w);
@@ -103,15 +104,15 @@ void ui_draw_text_centered_in(int design_x, int design_y,
                               u32 color) {
     if (!ttf_font || !text) return;
     unsigned int size = ui_map_size(design_size);
-    u32 tw = GRRLIB_WidthTTF(ttf_font, text, size);
+    u32 tw = text_width(text, size);
 
     int x = ui_map_x(design_x) + (ui_map_w(design_w) - (int)tw) / 2;
     /* GRRLIB places text by its top-left, and a glyph box is close enough to the
        point size that centring on it reads correctly at these sizes. */
     int y = ui_map_y(design_y) + (ui_map_h(design_h) - (int)size) / 2;
 
-    GRRLIB_PrintfTTF(x + 2, y + 2, ttf_font, text, size, shadow_color);
-    GRRLIB_PrintfTTF(x, y, ttf_font, text, size, color);
+    text_draw(x + 2, y + 2, text, size, shadow_color);
+    text_draw(x, y, text, size, color);
 }
 
 /* GX has no rounded-rectangle primitive, so a radius is built from a middle

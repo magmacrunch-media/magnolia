@@ -64,6 +64,13 @@ SOURCES  := source ../magnolia/source ../magnolia/font
 INCLUDES := ../magnolia ../magnolia/source ../magnolia/font source
 ```
 
+plus FreeType's header directory on `export INCLUDE`
+(`-I$(PORTLIBS_PATH)/ppc/include/freetype2`), which `source/text.c` needs. That
+is the only addition the engine has ever made to a game's include line, and it
+is why `template/Makefile` and all five games changed in the same commit as the
+glyph cache. A game that misses it fails at `ft2build.h: No such file or
+directory`.
+
 Deploy targets live in each game's Makefile (from `template/`), not here:
 `make deploy` (stage `sdcard/apps/<game>/`), `make dolphin` (emulator SD folder),
 `make card SD=/mnt/e` (real card — merges, only boot.dol/meta.xml overwritten so

@@ -8,6 +8,7 @@
 #include "scoring.h"
 #include "prefs.h"
 #include "ui_utils.h"
+#include "text.h"
 
 static int  sd_mounted = 0;
 static char app_name[64]     = "magnolia";
@@ -50,6 +51,14 @@ int magnolia_init(const MagnoliaConfig *cfg) {
     if (cfg && cfg->overscan_pct >= 0) {
         ui_set_overscan_pct(cfg->overscan_pct);
     }
+
+    /* The glyph cache, straight after the font it caches and before anything
+       draws through ui_utils. Its return code is deliberately not folded into
+       `status`: every text call works whether or not the cache came up, so a
+       game has nothing to decide here and a degraded return would only make
+       callers handle a case that does not exist. What it costs when it is off
+       is speed, and text.h explains how much. */
+    text_init();
 
     /* Prove the display is live, then name the step that might hang. */
     renderer_splash("STARTING", NULL);
@@ -99,6 +108,11 @@ void magnolia_shutdown(void) {
         fatUnmount("sd:");
         sd_mounted = 0;
     }
+
+    /* Before renderer_shutdown(), which frees the font these were rasterised
+       from -- and before GRRLIB_Exit(), which is what actually owns the
+       textures being handed back. */
+    text_shutdown();
 
     renderer_shutdown();
 }

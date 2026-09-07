@@ -20,7 +20,8 @@
 # them would put them out of reach on the machine where they are most useful.
 # Named once, so the guard below and the rules further down cannot drift apart --
 # `make test-menu` on a laptop with no cross-compiler has to work too.
-HOST_TESTS := test-storage test-menu test-gamestate test-theme test-input test-timestep \n              test-ui-geom
+HOST_TESTS := test-storage test-menu test-gamestate test-theme test-input test-timestep \
+              test-ui-geom test-glyphcache
 
 ifeq ($(filter test $(HOST_TESTS),$(MAKECMDGOALS)),)
 ifeq ($(strip $(DEVKITPPC)),)
@@ -126,6 +127,14 @@ test-ui-geom: | $(BUILD)
 test-theme: | $(BUILD)
 	@$(HOSTCC) $(HOSTCFLAGS) -o $(BUILD)/$@ \
 	    tests/test_theme.c source/theme.c -lm
+	@$(BUILD)/$@
+
+# glyphcache.c is the slot bookkeeping behind text.c, and is free of GRRLIB,
+# FreeType and libogc for exactly that reason -- see the header. text.c itself
+# is the half that talks to the hardware and is not testable here.
+test-glyphcache: | $(BUILD)
+	@$(HOSTCC) $(HOSTCFLAGS) -o $(BUILD)/$@ \
+	    tests/test_glyphcache.c source/glyphcache.c
 	@$(BUILD)/$@
 
 $(TARGET): $(OBJS)

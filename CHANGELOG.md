@@ -9,6 +9,74 @@ shared modules, the host-side test suite, and the deployment targets that every
 game now starts with -- and, latterly, the input, sprite-sheet and timestep work
 that a game with two players in front of it needs.
 
+### Text rendering
+
+- **Glyph cache** — `source/text.c` rasterises each (character, size) once
+  into a texture and blits it thereafter, caching the metrics alongside so
+  measuring is free too. `ui_draw_text_shadow`, `ui_draw_centered_text`,
+  `ui_draw_text_centered_in` and `ui_text_width` all go through it; nothing
+  moves on screen, because the cached path reproduces `GRRLIB_PrintfTTF`'s
+  positioning exactly.
+
+  Drawing text was the most expensive thing this engine did, and not for the
+  reason it looks like. Measured in Dolphin with `bench/`:
+
+  | | before | after |
+  |---|---|---|
+  | 20 glyphs at size 12 | 5839 us | 44 us |
+  | 20 glyphs at size 24 | 6403 us | 50 us |
+  | 20 glyphs at size 48 | 8574 us | 57 us |
+  | measuring 20 glyphs | 5755 us | 12 us |
+
+  A 60fps frame is 16667us, so twenty glyphs used to be a third of one. The
+  cost tracked the **number** of glyphs and barely noticed their size — four
+  times the pixel area cost 10% more — and `GRRLIB_WidthTTF`, which rasterises
+  nothing at all, cost almost as much as drawing. It was FreeType, about 290us
+  per glyph under emulation, not the pixels and not the GX calls. That is why
+  the fix is a cache and not batching, and it is worth having measured rather
+  than assumed: the obvious guess was per-pixel plotting, and the obvious fix
+  for that would have bought nothing.
+
+  What this cost in practice: jovian-humanitarian-conflict's results card —
+  five centred strings over an otherwise static screen — ran at **12fps**, and
+  during play every frame that drew a score popup hit the engine's `dt` cap,
+  so the game **discarded time** in proportion to how much was happening. Both
+  are gone: the card runs at 60fps and no frame reaches the cap.
+
+  The cache holds `GLYPH_CACHE_MAX` (192) entries with LRU eviction. A full
+  game frame plus a results card measured 76 entries and 229KB, with no
+  evictions over ~12,000 lookups.
+
+- **Kerning disables the cache rather than being ignored.** The cached path
+  advances by each glyph's own advance and does not ask FreeType for pair
+  adjustments, because that would be a per-frame FreeType call again.
+  magnolia's bundled font has no kerning table, but a game may load its own,
+  so `text_init()` checks the face and falls back to `GRRLIB_PrintfTTF` when
+  it kerns. A slow correct string beats a fast wrong one.
+
+- **BREAKING, for one line: games need FreeType's headers on their include
+  path.** `-lfreetype` was already in every game's `LIBS` because GRRLIB needs
+  it; `text.c` needs the headers too. Add to the `export INCLUDE` block:
+
+  ```makefile
+  -I$(PORTLIBS_PATH)/ppc/include/freetype2 \
+  ```
+
+  `template/Makefile` and all five games in this tree were updated in the same
+  commit. A game that misses it fails at `ft2build.h: No such file or
+  directory` while compiling the engine.
+
+- `source/glyphcache.c` holds the slot bookkeeping and is free of GRRLIB,
+  FreeType and libogc, so `make test-glyphcache` exercises the real shipped
+  eviction logic on the host — the same split as `ui_geom` under `ui_utils`.
+  Worth the split because the dangerous failure is quiet: a cache that reports
+  a fresh slot as evicted frees memory it never allocated, and one that reports
+  an eviction as fresh leaks a texture per glyph until a 24MB console runs out
+  an hour in. Neither is visible on a screenshot.
+
+- `bench/` — the program the numbers above come from. Not a game and not built
+  by `make`; see `bench/README.md`.
+
 ### Engine core
 
 - **printf now reaches Dolphin's log** — `magnolia_init()` calls
